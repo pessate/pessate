@@ -1,13 +1,12 @@
-h1. Partitioning tables with UUIDv7 and date range
+# Partitioning tables with UUIDv7 and date range
 
-h3. 
--- draft version - paulo junior
+#### draft version - paulo junior
 These are the functions to handle the ids / timestamps
 
 All the following were based on https://gitlab.com/postgres-ai/postgresql-consulting/postgres-howtos/-/blob/main/0065_uuid_v7_and_partitioning_timescaledb.md?ref_type=heads
 
-h4. Basic UUID generation: uuid_generate_v7()
-# FUNCTION TO GENERATE UUIID WITH THE TIMESTAMP IN IT
+##. Basic UUID generation: uuid_generate_v7()
+### FUNCTION TO GENERATE UUIID WITH THE TIMESTAMP IN IT
 ```sql
 create or replace function uuid_generate_v7() returns uuid
 as $$
@@ -30,8 +29,8 @@ select encode(
 $$ language SQL volatile;
 ```
 
-h4. Convert timestamp to UUID_v7: ts_to_uuid_v7(timestamptz)
-# ACTIVATE EXTENSION TO CRYPYT/DECRYPT UUIDV7
+## Convert timestamp to UUID_v7: ts_to_uuid_v7(timestamptz)
+### ACTIVATE EXTENSION TO CRYPYT/DECRYPT UUIDV7
 ```sql
 create extension pgcrypto;
 create or replace function ts_to_uuid_v7(timestamptz) returns uuid
@@ -52,7 +51,7 @@ as $$
 $$ language SQL volatile;
 ```
 
-h4. Convert UUIDv7 to timestamp: uuid_v7_to_ts(uuid_v7 uuid) 
+## Convert UUIDv7 to timestamp: uuid_v7_to_ts(uuid_v7 uuid) 
 ```sql
 create or replace function uuid_v7_to_ts(uuid_v7 uuid) returns timestamptz
 as $$
@@ -68,7 +67,7 @@ as $$
 $$ language sql;
 ```
 
-h4. Create monthly partitions: create_daily_uuidv7_partitions(parent_table_name text, curr_partition_date date)
+## Create monthly partitions: create_daily_uuidv7_partitions(parent_table_name text, curr_partition_date date)
 
 ```sql
 CREATE OR REPLACE FUNCTION create_daily_uuidv7_partitions(parent_table_name text, curr_partition_date date) RETURNS VOID AS
@@ -99,7 +98,7 @@ $BODY$
 LANGUAGE plpgsql;
 ```
 
-h4. Create daily partitions: create_monthly_uuidv7_partitions(parent_table_name text, curr_partition_date date)
+## Create daily partitions: create_monthly_uuidv7_partitions(parent_table_name text, curr_partition_date date)
 ```sql
 CREATE OR REPLACE FUNCTION create_monthly_uuidv7_partitions(parent_table_name text, curr_partition_date date) RETURNS VOID AS
 $BODY$
@@ -129,9 +128,9 @@ $BODY$
 LANGUAGE plpgsql;
 ```
 
-h4. Let's do some testing
+#. Let's do some testing
 
-# CREATE A TEST TABLE
+## CREATE A TEST TABLE
 ```sql
 CREATE TABLE if not exists public.test (
     id uuid not null PRIMARY KEY, 
@@ -139,7 +138,7 @@ CREATE TABLE if not exists public.test (
 PARTITION BY RANGE(id);
 ```
 
-# CREATE A CRON JOB TO CREATE PARTITIONS (MONTHLY OR DAILY) AS YOUR NEED
+## CREATE A CRON JOB TO CREATE PARTITIONS (MONTHLY OR DAILY) AS YOUR NEED
 ```sql
 --schedule a weekly job to create daily partitions for the next month
 SELECT cron.schedule('Maintenance Partition Tables Test', '@weekly', $$ select create_daily_uuidv7_partitions('test', now()::date); $$);
@@ -147,7 +146,7 @@ SELECT cron.schedule('Maintenance Partition Tables Test', '@weekly', $$ select c
 -- schedule a weekly job to create monthly partitions for the next year
 SELECT cron.schedule('Maintenance Partition Tables Test', '@weekly', $$ select create_monthly_uuidv7_partitions('test', now()::date); $$);
 ```
-# HOW TO CHECK IF PARTITION NAMING MATCHES THE DATES:
+## HOW TO CHECK IF PARTITION NAMING MATCHES THE DATES:
 ```sql
 --- check if partition name matches dates (daily)
 DO $$              
@@ -174,7 +173,7 @@ END;
 $$;
 ```
 
-# TIME TO INSERT SOME DATA
+## TIME TO INSERT SOME DATA
 ```sql
 -- here I'll do on a daily partitioned table
 DO $$              
@@ -189,7 +188,7 @@ END;
 $$;
 ```
 
-# AND FINALLY, TIME TO CHECK IF THE PLAN WILL WORK AS EXPECTED
+## AND FINALLY, TIME TO CHECK IF THE PLAN WILL WORK AS EXPECTED
 ```sql
 select (overlay(ts_to_uuid_v7('2024-05-13'::date)::text placing '00-0000-0000-000000000000' from 12)::uuid) as min_created_at ,(overlay(ts_to_uuid_v7('2024-05-15'::date)::text placing '00-0000-0000-000000000000' from 12)::uuid) as  max_created_at \gset
 ```
